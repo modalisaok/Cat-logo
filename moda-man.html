@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MODA-MAN | MODALISA</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,900&family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#F2ECE1;
+    --paper-dark:#E5DCC8;
+    --ink:#1C1A17;
+    --ink-soft:#3A352E;
+    --rust:#C1502E;
+    --rust-dark:#9A3D22;
+    --wine:#6E2A35;
+    --wine-dark:#531F27;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background-color: var(--ink);
+    background-image:
+      radial-gradient(circle at 20% 20%, rgba(193,80,46,0.08), transparent 40%),
+      radial-gradient(circle at 80% 80%, rgba(110,42,53,0.10), transparent 40%),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='420' height='180'%3E%3Ctext x='0' y='40' font-family='Fraunces, serif' font-weight='900' font-size='46' fill='%23F2ECE1' opacity='0.05' transform='rotate(-8 210 90)'%3EMODALISA%3C/text%3E%3Ctext x='-180' y='150' font-family='Fraunces, serif' font-weight='900' font-size='46' fill='%23F2ECE1' opacity='0.05' transform='rotate(-8 210 90)'%3EMODALISA%3C/text%3E%3C/svg%3E");
+    background-repeat: repeat, repeat, repeat;
+    background-size: auto, auto, 420px 180px;
+    color: var(--paper);
+    font-family:'Instrument Sans', sans-serif;
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    padding: 24px 16px 48px;
+  }
+  .wrap{ width:100%; max-width:620px; }
+  header{ text-align:center; margin-bottom:18px; }
+  h1{
+    font-family:'Fraunces', serif;
+    font-weight:900;
+    font-size: clamp(32px, 7vw, 52px);
+    letter-spacing: -0.02em;
+    color: var(--paper);
+  }
+  h1 span{ color: var(--rust); }
+  .subtitle{
+    font-family:'JetBrains Mono', monospace;
+    font-size:12px;
+    letter-spacing:0.12em;
+    text-transform:uppercase;
+    color: var(--paper-dark);
+    opacity:0.7;
+    margin-top:4px;
+  }
+  .hud{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    background: var(--ink-soft);
+    border:1px solid rgba(242,236,225,0.12);
+    border-radius:12px;
+    padding:10px 16px;
+    margin-bottom:12px;
+    font-family:'JetBrains Mono', monospace;
+    font-size:13px;
+  }
+  .hud div{ display:flex; gap:6px; align-items:center; }
+  .hud b{ color:var(--rust); font-weight:700; }
+  .lives{ display:flex; gap:4px; }
+  .life{ width:12px; height:12px; border-radius:50%; background:var(--rust); }
+  .life.lost{ background: rgba(242,236,225,0.15); }
+  canvas{
+    display:block;
+    width:100%;
+    background: var(--paper);
+    border-radius:14px;
+    box-shadow: 0 12px 30px rgba(0,0,0,0.45), 0 0 0 1px rgba(242,236,225,0.08);
+    image-rendering: pixelated;
+  }
+  .controls{
+    margin-top:14px;
+    display:flex;
+    justify-content:center;
+    gap:10px;
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px;
+    color: var(--paper-dark);
+    opacity:0.65;
+    text-align:center;
+  }
+  .dpad{
+    display:none;
+    grid-template-columns: 48px 48px 48px;
+    grid-template-rows: 48px 48px 48px;
+    gap:6px;
+    margin-top:18px;
+    justify-content:center;
+  }
+  .dpad button{
+    background: var(--ink-soft);
+    border:1px solid rgba(242,236,225,0.18);
+    border-radius:10px;
+    color:var(--paper);
+    font-size:18px;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .dpad button:active{ background: var(--rust); }
+  #up{grid-column:2; grid-row:1;}
+  #left{grid-column:1; grid-row:2;}
+  #down{grid-column:2; grid-row:2;}
+  #right{grid-column:3; grid-row:2;}
+  @media (pointer:coarse){ .dpad{ display:grid; } .controls{ display:none; } }
+
+  .overlay{
+    position:fixed; inset:0;
+    background: rgba(28,26,23,0.92);
+    display:flex; align-items:center; justify-content:center;
+    padding:24px;
+    z-index:50;
+  }
+  .overlay.hidden{ display:none; }
+  .card{
+    background: var(--paper);
+    color: var(--ink);
+    border-radius:16px;
+    padding:36px 28px;
+    max-width:420px;
+    width:100%;
+    text-align:center;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  }
+  .card h2{
+    font-family:'Fraunces', serif;
+    font-weight:900;
+    font-size:30px;
+    margin-bottom:8px;
+  }
+  .card p{ font-size:14px; line-height:1.5; color: var(--ink-soft); margin-bottom:18px; }
+  .coupon{
+    font-family:'JetBrains Mono', monospace;
+    background: var(--ink);
+    color: var(--paper);
+    border-radius:10px;
+    padding:14px;
+    font-size:20px;
+    font-weight:700;
+    letter-spacing:0.08em;
+    margin-bottom:18px;
+    border: 2px dashed var(--rust);
+  }
+  .btn{
+    display:inline-block;
+    width:100%;
+    padding:14px 18px;
+    border-radius:10px;
+    border:none;
+    font-family:'Instrument Sans', sans-serif;
+    font-weight:700;
+    font-size:15px;
+    cursor:pointer;
+    text-decoration:none;
+    margin-bottom:10px;
+  }
+  .btn-primary{ background: var(--rust); color: var(--paper); }
+  .btn-primary:hover{ background: var(--rust-dark); }
+  .btn-secondary{ background: transparent; color: var(--ink); border:1px solid rgba(28,26,23,0.25); }
+  .level-banner{
+    font-family:'Fraunces', serif;
+    font-weight:900;
+    font-size:40px;
+    text-align:center;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>MODA<span>-MAN</span></h1>
+    <div class="subtitle">Esquivá los enredos · Juntá la colección · Ganá 5% OFF</div>
+  </header>
+
+  <div class="hud">
+    <div>NIVEL <b id="hud-level">1</b>/3</div>
+    <div>PUNTOS <b id="hud-score">0</b></div>
+    <div class="lives" id="hud-lives"></div>
+  </div>
+
+  <canvas id="game" width="380" height="420"></canvas>
+
+  <div class="controls">Usá las flechas o WASD para moverte</div>
+  <div class="dpad">
+    <button id="up">▲</button>
+    <button id="left">◀</button>
+    <button id="down">▼</button>
+    <button id="right">▶</button>
+  </div>
+</div>
+
+<div class="overlay hidden" id="overlay">
+  <div class="card" id="overlay-card"></div>
+</div>
+
+<script>
+(function(){
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  const TILE = 20;
+
+  // 0 = pared, 1 = camino, 2 = prenda, 3 = power-up
+  const mazes = [
+    // Nivel 1 - chico
+    [
+      "0000000000000000000",
+      "0111111111111111110",
+      "0102222222222222010",
+      "0101000010000101010",
+      "0101011110111101010",
+      "0102222112222220010",
+      "0101110110111101010",
+      "0100010000010001010",
+      "0111112002211111110",
+      "0000010000010000000",
+      "0111110111011111110",
+      "0102222220222222010",
+      "0103010000010103010",
+      "0101011111110101010",
+      "0102222002222220010",
+      "0111111111111111110",
+      "0000000000000000000",
+    ],
+    // Nivel 2 - mediano
+    [
+      "00000000000000000000",
+      "01111111111111111110",
+      "01022222220222222010",
+      "01011101110111011010",
+      "01022201110111202010",
+      "01110201111102011110",
+      "00010200000002010000",
+      "01110211111112011110",
+      "01022210222112220010",
+      "01011010100101011010",
+      "01030010300103010310",
+      "01011010100101011010",
+      "01022210222012220010",
+      "01110211111112011110",
+      "00010200000002010000",
+      "01110201111102011110",
+      "01022201110111202010",
+      "01011101110111011010",
+      "01022222220222222010",
+      "01111111111111111110",
+      "00000000000000000000",
+    ],
+    // Nivel 3 - grande y denso
+    [
+      "000000000000000000000000",
+      "011111111111111111111110",
+      "010232220222222022322010",
+      "010101110111101110101010",
+      "010222110111101102220010",
+      "011102220100001022201110",
+      "000102111101110111201000",
+      "011102100222220012201110",
+      "010222113011101302220010",
+      "010111110111101111110010",
+      "000020001000000100020000",
+      "011120111110111110211110",
+      "010222220110110222220010",
+      "010111021100110120111010",
+      "000020201111110212020000",
+      "011120111110111110211110",
+      "010222110100001102220010",
+      "010101110111101110101010",
+      "010223220222222023222010",
+      "011111111111111111111110",
+      "000000000000000000000000",
+    ]
+  ];
+
+  const speeds = [220, 180, 145]; // ms entre pasos de fantasma por nivel (más bajo = más rápido)
+  const ghostColors = ['#6E2A35','#3A352E','#9A3D22','#1C1A17'];
+  const ghostLabels = ['✂️','✂️','✂️','✂️'];
+  const SHEET_URL = 'https://script.google.com/macros/s/AKfycbxwJHR4IgSZdrxQBjx0tqeTcCdxObCK8xvacSrisvQNuD6yPn8GZ9krUlC5TbfijHdM2g/exec';
+  function sendLead(extra){
+    if(!leadData) return;
+    const payload = Object.assign({}, leadData, extra || {});
+    fetch(SHEET_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: {'Content-Type':'text/plain;charset=utf-8'},
+      body: JSON.stringify(payload)
+    }).catch(()=>{ /* silencioso: no bloquea el juego si falla */ });
+  }
+  let leadData = null;
+
+  function checkEmailPlayed(email, cb){
+    const cbName = 'modaManCb_' + Date.now();
+    window[cbName] = function(data){
+      cb(data && data.exists);
+      delete window[cbName];
+      script.remove();
+    };
+    const script = document.createElement('script');
+    script.src = SHEET_URL + '?callback=' + cbName + '&email=' + encodeURIComponent(email);
+    script.onerror = function(){
+      // si falla la consulta (sin internet, etc.) dejamos pasar para no trabar a nadie
+      cb(false);
+      delete window[cbName];
+    };
+    document.body.appendChild(script);
+  }
+
+  let level = 0, score = 0, lives = 3;
+  let grid, cols, rows, player, ghosts, powerTimer, dotsLeft;
+  let dir = {x:0,y:0}, nextDir = {x:0,y:0};
+  let running = false;
+  let lastStep = 0;
+  let lastGhostMove = 0;
+
+  function parseMaze(idx){
+    const raw = mazes[idx];
+    rows = raw.length;
+    cols = raw[0].length;
+    grid = raw.map(row => row.split('').map(Number));
+    canvas.width = cols * TILE;
+    canvas.height = rows * TILE;
+  }
+
+  function countDots(){
+    let c = 0;
+    for(let r=0;r<rows;r++) for(let cIdx=0;cIdx<cols;cIdx++) if(grid[r][cIdx]===2 || grid[r][cIdx]===3) c++;
+    return c;
+  }
+
+  function findOpenTiles(){
+    const tiles = [];
+    for(let r=0;r<rows;r++) for(let cIdx=0;cIdx<cols;cIdx++) if(grid[r][cIdx]!==0) tiles.push({r,c:cIdx});
+    return tiles;
+  }
+
+  function setupLevel(idx){
+    parseMaze(idx);
+    dotsLeft = countDots();
+    player = {x:1, y:1, dx:0, dy:0};
+    // buscar posición inicial válida cercana a (1,1)
+    if(grid[1][1]===0){
+      const open = findOpenTiles();
+      const start = open[0];
+      player.x = start.c; player.y = start.r;
+    }
+    const open = findOpenTiles();
+    const farTiles = open.slice().sort((a,b)=>{
+      const da = Math.abs(a.r-player.y)+Math.abs(a.c-player.x);
+      const db = Math.abs(b.r-player.y)+Math.abs(b.c-player.x);
+      return db-da;
+    });
+    const ghostCount = 2 + idx; // 2,3,4
+    ghosts = [];
+    for(let i=0;i<ghostCount;i++){
+      const t = farTiles[i % farTiles.length];
+      ghosts.push({x:t.c, y:t.r, color: ghostColors[i], label: ghostLabels[i], scared:false});
+    }
+    dir = {x:0,y:0}; nextDir = {x:0,y:0};
+    powerTimer = 0;
+    updateHud();
+  }
+
+  function updateHud(){
+    document.getElementById('hud-level').textContent = level+1;
+    document.getElementById('hud-score').textContent = score;
+    const livesEl = document.getElementById('hud-lives');
+    livesEl.innerHTML = '';
+    for(let i=0;i<3;i++){
+      const d = document.createElement('div');
+      d.className = 'life' + (i>=lives ? ' lost' : '');
+      livesEl.appendChild(d);
+    }
+  }
+
+  function isWall(x,y){
+    if(y<0||y>=rows||x<0||x>=cols) return true;
+    return grid[y][x]===0;
+  }
+
+  function tryMove(entity, dx, dy){
+    const nx = entity.x+dx, ny = entity.y+dy;
+    if(!isWall(nx,ny)){ entity.x = nx; entity.y = ny; return true; }
+    return false;
+  }
+
+  function step(ts){
+    if(!running) return;
+    if(!lastStep) lastStep = ts;
+    const playerInterval = 130;
+    if(ts - lastStep > playerInterval){
+      lastStep = ts;
+      if(nextDir.x || nextDir.y){
+        if(!isWall(player.x+nextDir.x, player.y+nextDir.y)){
+          dir = {...nextDir};
+        }
+      }
+      if(dir.x || dir.y) tryMove(player, dir.x, dir.y);
+
+      const cell = grid[player.y][player.x];
+      if(cell===2){ grid[player.y][player.x]=1; score+=10; dotsLeft--; }
+      if(cell===3){ grid[player.y][player.x]=1; score+=50; dotsLeft--; powerTimer = 6000; ghosts.forEach(g=>g.scared=true); }
+
+      if(dotsLeft<=0){ winLevel(); return; }
+      updateHud();
+    }
+
+    if(powerTimer>0){
+      powerTimer -= 16;
+      if(powerTimer<=0) ghosts.forEach(g=>g.scared=false);
+    }
+
+    const ghostInterval = speeds[level];
+    if(!lastGhostMove) lastGhostMove = ts;
+    if(ts - lastGhostMove > ghostInterval){
+      lastGhostMove = ts;
+      ghosts.forEach(g=>{
+        const options = [[0,-1],[0,1],[-1,0],[1,0]].filter(([dx,dy])=>!isWall(g.x+dx,g.y+dy));
+        if(options.length===0) return;
+        let choice;
+        if(g.scared){
+          options.sort((a,b)=>{
+            const da = Math.abs((g.x+a[0])-player.x)+Math.abs((g.y+a[1])-player.y);
+            const db = Math.abs((g.x+b[0])-player.x)+Math.abs((g.y+b[1])-player.y);
+            return db-da;
+          });
+          choice = options[0];
+        } else {
+          if(Math.random()<0.65){
+            options.sort((a,b)=>{
+              const da = Math.abs((g.x+a[0])-player.x)+Math.abs((g.y+a[1])-player.y);
+              const db = Math.abs((g.x+b[0])-player.x)+Math.abs((g.y+b[1])-player.y);
+              return da-db;
+            });
+            choice = options[0];
+          } else {
+            choice = options[Math.floor(Math.random()*options.length)];
+          }
+        }
+        g.x += choice[0]; g.y += choice[1];
+      });
+    }
+
+    // colisiones
+    ghosts.forEach(g=>{
+      if(g.x===player.x && g.y===player.y){
+        if(g.scared){
+          score += 100;
+          // respawn fantasma lejos
+          const open = findOpenTiles().filter(t=>Math.abs(t.r-player.y)+Math.abs(t.c-player.x)>5);
+          const t = open[Math.floor(Math.random()*open.length)] || {r:1,c:1};
+          g.x=t.c; g.y=t.r; g.scared=false;
+        } else {
+          loseLife();
+        }
+      }
+    });
+
+    draw();
+    requestAnimationFrame(step);
+  }
+
+  function drawShirt(cx, cy, s, facing){
+    ctx.save();
+    ctx.translate(cx, cy);
+    let angle = 0;
+    if(facing.x===1) angle = 0;
+    else if(facing.x===-1) angle = Math.PI;
+    else if(facing.y===1) angle = Math.PI/2;
+    else if(facing.y===-1) angle = -Math.PI/2;
+    ctx.rotate(angle);
+    ctx.fillStyle = '#C1502E';
+    ctx.strokeStyle = '#9A3D22';
+    ctx.lineWidth = 1;
+    const k = s/9; // escala base
+    ctx.beginPath();
+    // silueta simple de remera (mangas + cuerpo + cuello), apuntando a la derecha
+    ctx.moveTo(-3*k, -8*k);      // hombro izq
+    ctx.lineTo(2*k, -8*k);       // hombro der
+    ctx.lineTo(6*k, -5*k);       // punta manga der
+    ctx.lineTo(3*k, -2*k);       // axila der
+    ctx.lineTo(3*k, 8*k);        // cuerpo abajo der
+    ctx.lineTo(-3*k, 8*k);       // cuerpo abajo izq
+    ctx.lineTo(-3*k, -2*k);      // axila izq
+    ctx.lineTo(-6*k, -5*k);      // punta manga izq
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    // cuello
+    ctx.beginPath();
+    ctx.arc(-0.5*k, -7.5*k, 2*k, 0, Math.PI*2);
+    ctx.fillStyle = '#F2ECE1';
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function draw(){
+    ctx.fillStyle = '#F2ECE1';
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+
+    // marca de agua MODALISA repetida
+    ctx.save();
+    ctx.globalAlpha = 0.07;
+    ctx.fillStyle = '#1C1A17';
+    ctx.font = "900 22px Fraunces, serif";
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.translate(canvas.width/2, canvas.height/2);
+    ctx.rotate(-0.18);
+    ctx.translate(-canvas.width/2, -canvas.height/2);
+    for(let y=-40; y<canvas.height+80; y+=70){
+      for(let x=-40; x<canvas.width+120; x+=160){
+        ctx.fillText('MODALISA', x, y);
+      }
+    }
+    ctx.restore();
+
+    for(let r=0;r<rows;r++){
+      for(let c=0;c<cols;c++){
+        const v = grid[r][c];
+        const x = c*TILE, y = r*TILE;
+        if(v===0){
+          ctx.fillStyle = '#1C1A17';
+          ctx.fillRect(x,y,TILE,TILE);
+        } else if(v===2){
+          ctx.fillStyle = '#C1502E';
+          ctx.beginPath();
+          ctx.arc(x+TILE/2, y+TILE/2, 3.5, 0, Math.PI*2);
+          ctx.fill();
+        } else if(v===3){
+          ctx.fillStyle = '#6E2A35';
+          ctx.beginPath();
+          ctx.arc(x+TILE/2, y+TILE/2, 7, 0, Math.PI*2);
+          ctx.fill();
+        }
+      }
+    }
+
+    // player (remera)
+    drawShirt(player.x*TILE+TILE/2, player.y*TILE+TILE/2, TILE/2-1, dir);
+
+    // ghosts
+    ghosts.forEach(g=>{
+      ctx.fillStyle = g.scared ? '#3A8C5A' : g.color;
+      ctx.beginPath();
+      ctx.arc(g.x*TILE+TILE/2, g.y*TILE+TILE/2-2, TILE/2-3, Math.PI, 0);
+      ctx.lineTo(g.x*TILE+TILE-3, g.y*TILE+TILE-2);
+      ctx.lineTo(g.x*TILE+3, g.y*TILE+TILE-2);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = '#F2ECE1';
+      ctx.font = (TILE-8)+'px sans-serif';
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText(g.label, g.x*TILE+TILE/2, g.y*TILE+TILE/2-1);
+    });
+  }
+
+  function loseLife(){
+    lives--;
+    updateHud();
+    if(lives<=0){
+      running = false;
+      sendLead({nivel: `Game over en nivel ${level+1} - ${score} puntos`});
+      showOverlay(`
+        <div class="level-banner" style="color:#6E2A35">GAME OVER</div>
+        <p style="margin-top:10px;">Llegaste a ${score} puntos en el nivel ${level+1}. Las telas se te enredaron... ¡probá otra vez!</p>
+        <button class="btn btn-primary" onclick="window.__restart()">Jugar de nuevo</button>
+      `);
+    } else {
+      // reset posiciones sin perder puntaje/nivel
+      setupPositionsOnly();
+    }
+  }
+
+  function setupPositionsOnly(){
+    const open = findOpenTiles();
+    player.x = open[0].c; player.y = open[0].r;
+    dir = {x:0,y:0}; nextDir = {x:0,y:0};
+    const farTiles = open.slice().sort((a,b)=>{
+      const da = Math.abs(a.r-player.y)+Math.abs(a.c-player.x);
+      const db = Math.abs(b.r-player.y)+Math.abs(b.c-player.x);
+      return db-da;
+    });
+    ghosts.forEach((g,i)=>{
+      const t = farTiles[i % farTiles.length];
+      g.x = t.c; g.y = t.r; g.scared=false;
+    });
+    powerTimer = 0;
+    running = true;
+    lastStep = 0; lastGhostMove = 0;
+    requestAnimationFrame(step);
+  }
+
+  function winLevel(){
+    running = false;
+    if(level >= mazes.length-1){
+      finalWin();
+    } else {
+      showOverlay(`
+        <div class="level-banner" style="color:#C1502E">¡NIVEL ${level+1} LISTO!</div>
+        <p style="margin-top:10px;">${score} puntos acumulados. El nivel ${level+2} viene más rápido y con más enredos.</p>
+        <button class="btn btn-primary" onclick="window.__nextLevel()">Siguiente nivel</button>
+      `);
+    }
+  }
+
+  function finalWin(){
+    sendLead({nivel: `GANADOR - 3 niveles - ${score} puntos`});
+    const ig = leadData ? leadData.ig : '';
+    const msg = encodeURIComponent(`Hola! Gané el juego MODA-MAN (cuenta de IG: ${ig}) y quiero usar mi cupón MODAMAN5`);
+    showOverlay(`
+      <div class="level-banner" style="color:#C1502E">🎉 ¡GANASTE!</div>
+      <p>Completaste los 3 niveles de MODA-MAN con ${score} puntos. Como prenda... eh, premio, tenés:</p>
+      <div class="coupon">MODAMAN5</div>
+      <p style="margin-top:-8px;">5% OFF en tu próximo pedido a MODALISA. Mostrá este código por WhatsApp.</p>
+      <a class="btn btn-primary" href="https://wa.me/5491128492979?text=${msg}" target="_blank">Reclamar por WhatsApp</a>
+      <button class="btn btn-secondary" onclick="window.__restart()">Jugar de nuevo</button>
+    `);
+  }
+
+  function showOverlay(html){
+    document.getElementById('overlay-card').innerHTML = html;
+    document.getElementById('overlay').classList.remove('hidden');
+  }
+  function hideOverlay(){
+    document.getElementById('overlay').classList.add('hidden');
+  }
+
+  window.__nextLevel = function(){
+    level++;
+    hideOverlay();
+    setupLevel(level);
+    running = true;
+    lastStep = 0; lastGhostMove = 0;
+    requestAnimationFrame(step);
+  };
+
+  window.__restart = function(){
+    level = 0; score = 0; lives = 3;
+    hideOverlay();
+    setupLevel(level);
+    running = true;
+    lastStep = 0; lastGhostMove = 0;
+    requestAnimationFrame(step);
+  };
+
+  // controles
+  window.addEventListener('keydown', e=>{
+    const tag = (document.activeElement && document.activeElement.tagName) || '';
+    if(tag==='INPUT' || tag==='TEXTAREA') return;
+    const map = {
+      ArrowUp:[0,-1], ArrowDown:[0,1], ArrowLeft:[-1,0], ArrowRight:[1,0],
+      w:[0,-1], s:[0,1], a:[-1,0], d:[1,0]
+    };
+    if(map[e.key]){ nextDir = {x:map[e.key][0], y:map[e.key][1]}; e.preventDefault(); }
+  });
+  function bindBtn(id,dx,dy){
+    const el = document.getElementById(id);
+    ['touchstart','mousedown'].forEach(evt=>{
+      el.addEventListener(evt, (e)=>{ e.preventDefault(); nextDir = {x:dx,y:dy}; });
+    });
+  }
+  bindBtn('up',0,-1); bindBtn('down',0,1); bindBtn('left',-1,0); bindBtn('right',1,0);
+
+  // init
+  setupLevel(level);
+  showLoginGate();
+
+  function showLoginGate(){
+    showOverlay(`
+      <div class="level-banner" style="color:#C1502E; font-size:30px;">Antes de jugar</div>
+      <p style="margin-top:8px;">Dejanos tus datos para activar tu cupón si ganás. Es rapidito.</p>
+      <div id="lead-form" style="text-align:left; margin-top:10px;">
+        <label style="font-family:'JetBrains Mono',monospace; font-size:11px; text-transform:uppercase; opacity:0.7;">Email</label>
+        <input type="email" id="lead-email" placeholder="tu@email.com" style="width:100%; padding:10px; margin:4px 0 12px; border-radius:8px; border:1px solid rgba(28,26,23,0.25); font-family:'Instrument Sans',sans-serif; font-size:14px;">
+        <label style="font-family:'JetBrains Mono',monospace; font-size:11px; text-transform:uppercase; opacity:0.7;">WhatsApp</label>
+        <input type="tel" id="lead-wpp" placeholder="11 1234 5678" style="width:100%; padding:10px; margin:4px 0 12px; border-radius:8px; border:1px solid rgba(28,26,23,0.25); font-family:'Instrument Sans',sans-serif; font-size:14px;">
+        <label style="font-family:'JetBrains Mono',monospace; font-size:11px; text-transform:uppercase; opacity:0.7;">Instagram de tu marca</label>
+        <input type="text" id="lead-ig" placeholder="@tumarca" style="width:100%; padding:10px; margin:4px 0 16px; border-radius:8px; border:1px solid rgba(28,26,23,0.25); font-family:'Instrument Sans',sans-serif; font-size:14px;">
+        <button type="button" id="lead-submit-btn" class="btn btn-primary">Continuar</button>
+      </div>
+      <p id="lead-error" style="color:#C1502E; font-size:12px; display:none;">Completá los 3 campos para seguir.</p>
+    `);
+    document.getElementById('lead-submit-btn').addEventListener('click', e=>{
+      e.preventDefault();
+      const email = document.getElementById('lead-email').value.trim();
+      const wpp = document.getElementById('lead-wpp').value.trim();
+      const ig = document.getElementById('lead-ig').value.trim();
+      if(!email || !wpp || !ig){
+        document.getElementById('lead-error').textContent = 'Completá los 3 campos para seguir.';
+        document.getElementById('lead-error').style.display = 'block';
+        return;
+      }
+      const btn = document.getElementById('lead-submit-btn');
+      btn.disabled = true;
+      btn.textContent = 'Verificando...';
+      checkEmailPlayed(email, (already)=>{
+        btn.disabled = false;
+        btn.textContent = 'Continuar';
+        if(already){
+          document.getElementById('lead-error').textContent = 'Ese email ya jugó MODA-MAN. Solo se permite un intento por persona.';
+          document.getElementById('lead-error').style.display = 'block';
+          return;
+        }
+        leadData = {email, wpp, ig};
+        sendLead({nivel: 'login - empezó a jugar'});
+        showIntro();
+      });
+    });
+  }
+
+  function showIntro(){
+    showOverlay(`
+      <div class="level-banner" style="color:#C1502E">MODA-MAN</div>
+      <p style="margin-top:10px;">Esquivá las tijeras que te persiguen. Juntá toda la colección de los 3 niveles y ganá <b>5% OFF</b> en MODALISA. Tenés 3 vidas, ¡cuidalas!</p>
+      <button class="btn btn-primary" onclick="window.__start()">Empezar a jugar</button>
+    `);
+  }
+
+  window.__start = function(){
+    hideOverlay();
+    running = true;
+    requestAnimationFrame(step);
+  };
+})();
+</script>
+</body>
+</html>
